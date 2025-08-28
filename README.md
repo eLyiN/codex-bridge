@@ -1,6 +1,6 @@
 # Codex Bridge
 
-![CI Status](https://github.com/shelakh/codex-bridge/actions/workflows/ci.yml/badge.svg)
+![CI Status](https://github.com/eLyiN/codex-bridge/actions/workflows/ci.yml/badge.svg)
 ![PyPI Version](https://img.shields.io/pypi/v/codex-bridge)
 ![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)
