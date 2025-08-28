@@ -28,11 +28,14 @@ mcp = FastMCP("codex-assistant")
 
 
 def _get_timeout() -> int:
-    """Get timeout from environment variable or default to 60 seconds."""
+    """Get timeout from environment variable or default to 90 seconds.
+    
+    Recommended: 60-120 seconds. Values under 60 may cause hanging.
+    """
     try:
-        return int(os.environ.get("CODEX_TIMEOUT", "60"))
+        return int(os.environ.get("CODEX_TIMEOUT", "90"))
     except ValueError:
-        return 60
+        return 90
 
 
 
@@ -141,7 +144,7 @@ def _format_response(raw_response: str, format_type: str, execution_time: float,
 def consult_codex(
     query: str,
     directory: str,
-    format: str = "text",
+    format: str = "json",
     timeout: Optional[int] = None
 ) -> str:
     """
@@ -153,8 +156,8 @@ def consult_codex(
     Args:
         query: The prompt to send to Codex
         directory: Working directory (required)
-        format: Output format - "text", "json", or "code"
-        timeout: Optional timeout in seconds (overrides env var)
+        format: Output format - "text", "json", or "code" (default: "json")
+        timeout: Optional timeout in seconds (overrides env var, recommended: 60-120)
         
     Returns:
         Formatted response based on format parameter
@@ -254,7 +257,7 @@ def consult_codex_with_stdin(
     stdin_content: str,
     prompt: str,
     directory: str,
-    format: str = "text",
+    format: str = "json",
     timeout: Optional[int] = None
 ) -> str:
     """
@@ -267,8 +270,8 @@ def consult_codex_with_stdin(
         stdin_content: Content to pipe as stdin (e.g., file contents, diff, logs)
         prompt: The prompt to process the stdin content
         directory: Working directory (required)
-        format: Output format - "text", "json", or "code"
-        timeout: Optional timeout in seconds (overrides env var)
+        format: Output format - "text", "json", or "code" (default: "json")
+        timeout: Optional timeout in seconds (overrides env var, recommended: 60-120)
         
     Returns:
         Formatted response based on format parameter
