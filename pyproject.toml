@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-bridge"
+version = "1.0.0"
+description = "Lightweight MCP server bridging Claude Code to OpenAI Codex via official CLI"
+readme = "README.md"
+license = "MIT"
+authors = [
+    {name = "Shelakh", email = "info@shelakh.com"}
+]
+keywords = ["mcp", "codex", "openai", "ai", "coding", "assistant"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "mcp>=1.0.0",
+]
+
+[project.scripts]
+codex-bridge = "src:main"
+
+[project.urls]
+Homepage = "https://github.com/shelakh/codex-bridge"
+Repository = "https://github.com/shelakh/codex-bridge"
+Issues = "https://github.com/shelakh/codex-bridge/issues"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.setuptools.package-data]
+src = ["*.md", "*.txt", "*.env.example"]

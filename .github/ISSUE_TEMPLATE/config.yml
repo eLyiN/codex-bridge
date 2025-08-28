@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 General Discussion
+    url: https://github.com/shelakh/codex-bridge/discussions
+    about: Ask questions, share ideas, or discuss the project with the community
+  - name: 📚 Documentation
+    url: https://github.com/shelakh/codex-bridge/blob/main/README.md
+    about: Check the README and other documentation for usage information
+  - name: 🔒 Security Issues
+    url: https://github.com/shelakh/codex-bridge/security/advisories/new
+    about: Report security vulnerabilities privately (do not use public issues)

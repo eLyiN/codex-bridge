@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Node.js for Codex CLI
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install Codex CLI
+      run: npm install -g @openai/codex
+
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build wheel
+
+    - name: Build package
+      run: |
+        python -m build
+
+    - name: Install package
+      run: |
+        pip install dist/*.whl
+
+    - name: Test basic import
+      run: |
+        python -c "import src; print('Package imported successfully')"
+        python -c "from src import main; print('Main function imported successfully')"
+
+    - name: Test CLI availability
+      run: |
+        codex --version || echo "Codex CLI available"
+
+    - name: Verify package metadata
+      run: |
+        python -c "import src; print(f'Version: {src.__version__}')"

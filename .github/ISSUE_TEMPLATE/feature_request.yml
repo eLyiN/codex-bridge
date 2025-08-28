@@ -1,0 +1,155 @@
+name: Feature Request
+description: Suggest an idea for Codex Bridge
+title: "[FEATURE] "
+labels: ["enhancement", "triage"]
+assignees: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for suggesting a new feature for Codex Bridge! 
+        
+        Please search existing issues and discussions first to avoid duplicates.
+
+  - type: textarea
+    id: problem-description
+    attributes:
+      label: Problem Description
+      description: Is your feature request related to a problem? Please describe.
+      placeholder: |
+        I'm always frustrated when...
+        Current limitation is...
+        It would be helpful if...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed-solution
+    attributes:
+      label: Proposed Solution
+      description: Describe the solution you'd like to see implemented.
+      placeholder: |
+        I would like...
+        The feature should...
+        This could work by...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternative Solutions
+      description: Describe any alternative solutions or features you've considered.
+      placeholder: |
+        Alternative approach 1...
+        Alternative approach 2...
+        Workarounds I've tried...
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Feature Type
+      description: What type of feature is this?
+      options:
+        - New MCP tool
+        - Enhancement to existing tool
+        - Configuration option
+        - Documentation improvement
+        - Developer experience
+        - Performance improvement
+        - Other (specify below)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      description: How important is this feature to you?
+      options:
+        - Nice to have
+        - Would be helpful
+        - Important for my workflow
+        - Critical/blocking issue
+    validations:
+      required: true
+
+  - type: textarea
+    id: use-cases
+    attributes:
+      label: Use Cases
+      description: Provide specific examples of how this feature would be used.
+      placeholder: |
+        Use case 1: When I need to...
+        Use case 2: This would help with...
+        Use case 3: A typical workflow would be...
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance-criteria
+    attributes:
+      label: Acceptance Criteria
+      description: |
+        What would make this feature complete? 
+        How would you test that it works correctly?
+      placeholder: |
+        - [ ] Feature does X when Y happens
+        - [ ] Error handling for Z scenario
+        - [ ] Documentation updated
+        - [ ] Backwards compatibility maintained
+
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: Additional Context
+      description: |
+        Add any other context, screenshots, or examples about the feature request.
+        
+        - Related tools or software
+        - Similar features in other projects
+        - Technical considerations
+      placeholder: Any additional context...
+
+  - type: checkboxes
+    id: compatibility
+    attributes:
+      label: Compatibility Considerations
+      description: Please indicate any compatibility requirements
+      options:
+        - label: This feature should maintain backward compatibility
+          required: false
+        - label: This feature can introduce breaking changes (with migration path)
+          required: false
+        - label: This feature should work with all supported Python versions
+          required: false
+        - label: This feature should work with Codex models
+          required: false
+
+  - type: checkboxes
+    id: contribution
+    attributes:
+      label: Contribution
+      description: Would you be willing to help implement this feature?
+      options:
+        - label: I would like to implement this feature myself
+          required: false
+        - label: I can help with testing the implementation
+          required: false
+        - label: I can help with documentation
+          required: false
+        - label: I can provide feedback during development
+          required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm you have done the following
+      options:
+        - label: I have searched for existing feature requests
+          required: true
+        - label: This feature aligns with the project's simplicity goals
+          required: true
+        - label: I have provided clear use cases and examples
+          required: true
