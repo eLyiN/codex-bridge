@@ -37,6 +37,7 @@ def _get_timeout() -> int:
 
 
 
+
 def _clean_codex_output(output: str) -> str:
     """Clean irrelevant messages from Codex CLI output."""
     if not output:
@@ -186,7 +187,7 @@ def consult_codex(
         processed_query = query
     
     # Setup command and timeout
-    cmd = ["codex"]
+    cmd = ["codex", "exec"]
     timeout_value = timeout or _get_timeout()
     
     # Execute with timing
@@ -198,7 +199,8 @@ def consult_codex(
             capture_output=True,
             text=True,
             timeout=timeout_value,
-            input=processed_query
+            input=processed_query,
+            start_new_session=True
         )
         execution_time = time.time() - start_time
         
@@ -302,7 +304,7 @@ def consult_codex_with_stdin(
         processed_query = combined_input
     
     # Setup command and timeout
-    cmd = ["codex"]
+    cmd = ["codex", "exec"]
     timeout_value = timeout or _get_timeout()
     
     # Execute with timing
@@ -314,7 +316,8 @@ def consult_codex_with_stdin(
             capture_output=True,
             text=True,
             timeout=timeout_value,
-            input=processed_query
+            input=processed_query,
+            start_new_session=True
         )
         execution_time = time.time() - start_time
         
@@ -427,7 +430,7 @@ def consult_codex_batch(
         
         # Process individual query
         processed_query = _format_prompt_for_json(query)
-        cmd = ["codex"]
+        cmd = ["codex", "exec"]
         
         start_time = time.time()
         try:
@@ -437,7 +440,8 @@ def consult_codex_batch(
                 capture_output=True,
                 text=True,
                 timeout=query_timeout,
-                input=processed_query
+                input=processed_query,
+                start_new_session=True
             )
             execution_time = time.time() - start_time
             
