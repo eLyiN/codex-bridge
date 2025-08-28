@@ -77,7 +77,8 @@ import json
 def consult_codex(
     query: str, 
     directory: str = ".", 
-    model: Optional[str] = None
+    format: str = "json",
+    timeout: Optional[int] = None
 ) -> str:
     """
     Send a query to Codex CLI.
@@ -85,10 +86,11 @@ def consult_codex(
     Args:
         query: The question or prompt to send
         directory: Working directory for the query
-        model: Optional model name (flash, pro)
+        format: Output format - "text", "json", or "code" (default: "json")
+        timeout: Optional timeout in seconds (recommended: 60-120)
         
     Returns:
-        Codex's response as a string
+        Codex's response as a formatted string
         
     Raises:
         RuntimeError: If CLI is not available or query fails
@@ -204,10 +206,11 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) for community interaction 
 Before submitting, verify:
 
 - [ ] MCP server starts without errors
-- [ ] `consult_codex` tool works with basic queries
-- [ ] `consult_codex_with_files` tool works with file attachments
+- [ ] `consult_codex` tool works with basic queries (defaults to JSON format)
+- [ ] `consult_codex_with_stdin` tool works with stdin content
+- [ ] `consult_codex_batch` tool works for batch processing
 - [ ] Error handling works properly (try invalid queries)
-- [ ] Both `start_server_dev.sh` and `start_server_uvx.sh` work
+- [ ] Timeout configuration works (test with CODEX_TIMEOUT environment variable)
 - [ ] Documentation is updated and accurate
 
 ### Integration Testing

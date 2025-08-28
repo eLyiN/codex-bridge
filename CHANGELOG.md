@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - 2025-01-28
+
+### Changed
+- **Default Format**: Changed default output format from "text" to "json" for structured responses
+- **Default Timeout**: Increased default timeout from 60 to 90 seconds for better reliability
+- **Documentation**: Updated function docstrings with timeout recommendations (60-120 seconds)
+- **User Experience**: Improved out-of-the-box configuration to prevent hanging issues
+
+### Added
+- Enhanced timeout guidance in function documentation
+- Better default configuration for production use
+
+### Fixed
+- Reduced likelihood of timeout-related hanging during complex queries
+- Improved structured output consistency with JSON default
+
+## [1.0.1] - 2025-01-28
+
+### Fixed
+- **Process Management**: Resolved infinite codex process spawning issue
+- **CLI Integration**: Improved subprocess handling for better stability
+
+### Changed
+- **CI/CD**: Updated CI status badge URL to reflect new repository location
+- **Build Process**: Removed deprecated activation scripts and configuration files
+
 ## [1.0.0] - 2025-01-28
 
 ### Added

@@ -14,7 +14,7 @@ A lightweight MCP (Model Context Protocol) server that enables AI coding assista
 - **Direct Codex CLI Integration**: Zero API costs using official Codex CLI
 - **Simple MCP Tools**: Two core functions for basic queries and file analysis
 - **Stateless Operation**: No sessions, caching, or complex state management
-- **Production Ready**: Robust error handling with configurable 60-second timeouts
+- **Production Ready**: Robust error handling with configurable timeouts (default: 90 seconds)
 - **Minimal Dependencies**: Only requires `mcp>=1.0.0` and Codex CLI
 - **Easy Deployment**: Support for both uvx and traditional pip installation
 - **Universal MCP Compatibility**: Works with any MCP-compatible AI coding assistant
@@ -342,7 +342,7 @@ Once configured with any client, use the same two tools:
 
 ### Timeout Configuration
 
-By default, Codex Bridge uses a 60-second timeout for all CLI operations. For longer queries (large files, complex analysis), you can configure a custom timeout using the `CODEX_BRIDGE_TIMEOUT` environment variable.
+By default, Codex Bridge uses a 90-second timeout for all CLI operations. For longer queries (large files, complex analysis), you can configure a custom timeout using the `CODEX_TIMEOUT` environment variable.
 
 **Example configurations:**
 
@@ -351,7 +351,7 @@ By default, Codex Bridge uses a 60-second timeout for all CLI operations. For lo
 
 ```bash
 # Add with custom timeout (120 seconds)
-claude mcp add codex-bridge -s user --env CODEX_BRIDGE_TIMEOUT=120 -- uvx codex-bridge
+claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 -- uvx codex-bridge
 ```
 
 </details>
@@ -366,7 +366,7 @@ claude mcp add codex-bridge -s user --env CODEX_BRIDGE_TIMEOUT=120 -- uvx codex-
       "command": "uvx",
       "args": ["codex-bridge"],
       "env": {
-        "CODEX_BRIDGE_TIMEOUT": "120"
+        "CODEX_TIMEOUT": "120"
       }
     }
   }
@@ -376,46 +376,58 @@ claude mcp add codex-bridge -s user --env CODEX_BRIDGE_TIMEOUT=120 -- uvx codex-
 </details>
 
 **Timeout Options:**
-- **Default**: 60 seconds (if not configured)
+- **Default**: 90 seconds (if not configured)
 - **Range**: Any positive integer (seconds)
-- **Recommended**: 120-300 seconds for large file analysis
-- **Invalid values**: Fall back to 60 seconds with warning
+- **Recommended**: 60-120 seconds for most queries, 120-300 for large file analysis
+- **Invalid values**: Fall back to 90 seconds with warning
 
 ## 🛠️ Available Tools
 
 ### `consult_codex`
-Direct CLI bridge for simple queries.
+Direct CLI bridge for simple queries with structured JSON output by default.
 
 **Parameters:**
 - `query` (string): The question or prompt to send to Codex
 - `directory` (string): Working directory for the query (default: current directory)
-- `model` (string, optional): Model to use (optional)
+- `format` (string): Output format - "text", "json", or "code" (default: "json")
+- `timeout` (int, optional): Timeout in seconds (recommended: 60-120, default: 90)
 
 **Example:**
 ```python
 consult_codex(
     query="Find authentication patterns in this codebase",
     directory="/path/to/project",
-    model="flash"
+    format="json",  # Default format
+    timeout=90      # Default timeout
 )
 ```
 
-### `consult_codex_with_files`
-CLI bridge with file attachments for detailed analysis.
+### `consult_codex_with_stdin`
+CLI bridge with stdin content for pipeline-friendly execution.
 
 **Parameters:**
-- `query` (string): The question or prompt to send to Codex
+- `stdin_content` (string): Content to pipe as stdin (file contents, diffs, logs)
+- `prompt` (string): The prompt to process the stdin content
 - `directory` (string): Working directory for the query
-- `files` (list): List of file paths relative to the directory
-- `model` (string, optional): Model to use (optional)
+- `format` (string): Output format - "text", "json", or "code" (default: "json")
+- `timeout` (int, optional): Timeout in seconds (recommended: 60-120, default: 90)
+
+### `consult_codex_batch`
+Batch processing for multiple queries - perfect for CI/CD automation.
+
+**Parameters:**
+- `queries` (list): List of query dictionaries with 'query' and optional 'timeout'
+- `directory` (string): Working directory for all queries
+- `format` (string): Output format - currently only "json" supported for batch
 
 **Example:**
 ```python
-consult_codex_with_files(
-    query="Analyze these auth files and suggest improvements",
+consult_codex_with_stdin(
+    stdin_content=open("src/auth.py").read(),
+    prompt="Analyze this auth file and suggest improvements",
     directory="/path/to/project",
-    files=["src/auth.py", "src/models.py"],
-    model="pro"
+    format="json",  # Default format
+    timeout=120     # Custom timeout for complex analysis
 )
 ```
 
@@ -433,21 +445,29 @@ consult_codex(
 ### Detailed File Review
 ```python
 # Analyze specific files
-consult_codex_with_files(
-    query="Review these files and suggest security improvements",
+with open("/Users/dev/my-project/src/auth.py") as f:
+    auth_content = f.read()
+    
+consult_codex_with_stdin(
+    stdin_content=auth_content,
+    prompt="Review this file and suggest security improvements",
     directory="/Users/dev/my-project",
-    files=["src/auth.py", "src/middleware.py"],
-    model="pro"
+    format="json",  # Structured output
+    timeout=120     # Allow more time for detailed analysis
 )
 ```
 
-### Multi-file Analysis
+### Batch Processing
 ```python
-# Compare multiple implementation files
-consult_codex_with_files(
-    query="Compare these database implementations and recommend the best approach",
+# Process multiple queries at once
+consult_codex_batch(
+    queries=[
+        {"query": "Analyze authentication patterns", "timeout": 60},
+        {"query": "Review database implementations", "timeout": 90},
+        {"query": "Check security vulnerabilities", "timeout": 120}
+    ],
     directory="/Users/dev/my-project",
-    files=["src/db/postgres.py", "src/db/sqlite.py", "src/db/redis.py"]
+    format="json"  # Always JSON for batch processing
 )
 ```
 
@@ -456,7 +476,8 @@ consult_codex_with_files(
 ### Core Design
 - **CLI-First**: Direct subprocess calls to `codex` command
 - **Stateless**: Each tool call is independent with no session state
-- **Fixed Timeout**: 60-second maximum execution time
+- **Configurable Timeout**: 90-second default execution time (configurable)
+- **Structured Output**: JSON format by default for better integration
 - **Simple Error Handling**: Clear error messages with fail-fast approach
 
 ### Project Structure
@@ -516,7 +537,7 @@ codex --version
 ### Common Error Messages
 - **"CLI not available"**: Codex CLI is not installed or not in PATH
 - **"Authentication required"**: Run `codex auth login`
-- **"Timeout after 60 seconds"**: Query took too long, try breaking it into smaller parts
+- **"Timeout after X seconds"**: Query took too long, try increasing timeout or breaking into smaller parts
 
 ## 🤝 Contributing
 
