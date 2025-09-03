@@ -82,7 +82,8 @@ python -c "import src; print('Package works!')"
 - **CLI-First**: Direct subprocess calls to `codex` command
 - **Stateless**: Each tool call is independent with no session state
 - **Non-Interactive**: Structured execution with JSON/text/code formats
-- **Configurable Timeout**: Default 60-second execution time (configurable via CODEX_TIMEOUT)
+- **Configurable Timeout**: Default 90-second execution time (configurable via CODEX_TIMEOUT)
+- **Git Repository Check**: Configurable via CODEX_SKIP_GIT_CHECK for non-git directories
 - **Fail-Fast**: Clear error messages with simple error handling
 - **Zero Dependencies**: Only `mcp>=1.0.0` and external Codex CLI
 
@@ -156,6 +157,8 @@ codex-bridge/
 - **"Timeout after X seconds"**: Query too complex or model overloaded
   - Solution: Increase timeout with CODEX_TIMEOUT environment variable
   - Alternative: Break into smaller parts or use batch processing
+- **"Not inside a trusted directory"**: Git repository check failed
+  - Solution: Set CODEX_SKIP_GIT_CHECK=true environment variable (use only in trusted directories)
 - **"Directory does not exist"**: Invalid directory parameter
   - Solution: Use absolute paths or verify directory exists
 - **"Invalid format"**: Unsupported format parameter
@@ -201,7 +204,8 @@ codex-bridge/
 - **Module Execution**: `python -m src`
 
 ### Configuration
-- **Timeout**: Configurable via CODEX_TIMEOUT environment variable (default: 60 seconds)
+- **Timeout**: Configurable via CODEX_TIMEOUT environment variable (default: 90 seconds)
+- **Git Repository Check**: Configurable via CODEX_SKIP_GIT_CHECK environment variable (default: enabled)
 - **Working Directory**: Configurable per request
 - **File Encoding**: UTF-8 with error handling
 
@@ -211,11 +215,20 @@ Set environment variables to customize behavior:
 ```bash
 # Example: 2-minute timeout configuration
 claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 -- uvx codex-bridge
+
+# Example: Enable for non-git directories (use only in trusted environments)
+claude mcp add codex-bridge -s user --env CODEX_SKIP_GIT_CHECK=true -- uvx codex-bridge
+
+# Example: Both configurations
+claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 --env CODEX_SKIP_GIT_CHECK=true -- uvx codex-bridge
 ```
 
 **Valid Variables:**
-- **CODEX_TIMEOUT**: Positive integers (seconds), default: 60
-- **Recommended**: 120-300 seconds timeout for complex queries
+- **CODEX_TIMEOUT**: Positive integers (seconds), default: 90
+  - **Recommended**: 120-300 seconds timeout for complex queries
+- **CODEX_SKIP_GIT_CHECK**: Boolean-like values ("true", "1", "yes"), default: false
+  - **Security Warning**: Only use in trusted directories you control
+  - **Use case**: Working in directories that are not Git repositories
 
 ## Security Considerations
 

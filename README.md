@@ -344,6 +344,12 @@ Once configured with any client, use the same two tools:
 
 By default, Codex Bridge uses a 90-second timeout for all CLI operations. For longer queries (large files, complex analysis), you can configure a custom timeout using the `CODEX_TIMEOUT` environment variable.
 
+### Git Repository Check
+
+By default, Codex CLI requires being inside a Git repository or trusted directory. If you need to use Codex Bridge in directories that aren't Git repositories, you can set the `CODEX_SKIP_GIT_CHECK` environment variable.
+
+**⚠️ Security Warning**: Only enable this flag in trusted environments where you control the directory structure.
+
 **Example configurations:**
 
 <details>
@@ -352,6 +358,12 @@ By default, Codex Bridge uses a 90-second timeout for all CLI operations. For lo
 ```bash
 # Add with custom timeout (120 seconds)
 claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 -- uvx codex-bridge
+
+# Add with git repository check disabled (for non-git directories)
+claude mcp add codex-bridge -s user --env CODEX_SKIP_GIT_CHECK=true -- uvx codex-bridge
+
+# Add with both configurations
+claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 --env CODEX_SKIP_GIT_CHECK=true -- uvx codex-bridge
 ```
 
 </details>
@@ -366,7 +378,8 @@ claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 -- uvx codex-bridge
       "command": "uvx",
       "args": ["codex-bridge"],
       "env": {
-        "CODEX_TIMEOUT": "120"
+        "CODEX_TIMEOUT": "120",
+        "CODEX_SKIP_GIT_CHECK": "true"
       }
     }
   }
@@ -375,11 +388,19 @@ claude mcp add codex-bridge -s user --env CODEX_TIMEOUT=120 -- uvx codex-bridge
 
 </details>
 
-**Timeout Options:**
+**Configuration Options:**
+
+**CODEX_TIMEOUT:**
 - **Default**: 90 seconds (if not configured)
 - **Range**: Any positive integer (seconds)
 - **Recommended**: 60-120 seconds for most queries, 120-300 for large file analysis
 - **Invalid values**: Fall back to 90 seconds with warning
+
+**CODEX_SKIP_GIT_CHECK:**
+- **Default**: false (Git repository check enabled)
+- **Valid values**: "true", "1", "yes" (case-insensitive) to disable the check
+- **Use case**: Working in directories that are not Git repositories
+- **Security**: Only use in trusted directories you control
 
 ## 🛠️ Available Tools
 

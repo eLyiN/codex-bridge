@@ -38,6 +38,16 @@ def _get_timeout() -> int:
         return 90
 
 
+def _should_skip_git_check() -> bool:
+    """Check if git repository check should be skipped.
+    
+    Reads CODEX_SKIP_GIT_CHECK environment variable.
+    Defaults to False for security. Set to 'true' or '1' to enable.
+    """
+    skip_check = os.environ.get("CODEX_SKIP_GIT_CHECK", "false").lower()
+    return skip_check in ("true", "1", "yes")
+
+
 
 
 
@@ -191,6 +201,8 @@ def consult_codex(
     
     # Setup command and timeout
     cmd = ["codex", "exec"]
+    if _should_skip_git_check():
+        cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
     
     # Execute with timing
@@ -308,6 +320,8 @@ def consult_codex_with_stdin(
     
     # Setup command and timeout
     cmd = ["codex", "exec"]
+    if _should_skip_git_check():
+        cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
     
     # Execute with timing
@@ -434,6 +448,8 @@ def consult_codex_batch(
         # Process individual query
         processed_query = _format_prompt_for_json(query)
         cmd = ["codex", "exec"]
+        if _should_skip_git_check():
+            cmd.append("--skip-git-repo-check")
         
         start_time = time.time()
         try:
