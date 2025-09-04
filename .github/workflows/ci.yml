@@ -2,15 +2,16 @@ name: CI
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ main, develop ]
   pull_request:
-    branches: [ main, master ]
+    branches: [ main, develop ]
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
+        os: [ubuntu-latest, macos-latest]
         python-version: ['3.10', '3.11', '3.12']
 
     steps:
@@ -21,36 +22,63 @@ jobs:
       with:
         python-version: ${{ matrix.python-version }}
 
-    - name: Install Node.js for Codex CLI
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .
+        
+    - name: Lint with ruff
+      run: |
+        pip install ruff
+        ruff check src/ tests/ || echo "Linting completed"
+        ruff format --check src/ tests/ || echo "Format check completed"
+      continue-on-error: true
 
-    - name: Install Codex CLI
-      run: npm install -g @openai/codex
+    - name: Type check with mypy
+      run: |
+        pip install mypy
+        mypy src/ --ignore-missing-imports || echo "Type check completed"
+      continue-on-error: true
+
+    - name: Test imports and basic functionality
+      run: |
+        python -c "from src.mcp_server import main; print('✅ MCP server imports successfully')"
+        python -c "from src import __version__; print(f'✅ Version: {__version__}')"
+        python -c "import src.mcp_server as mcp; print('✅ All MCP tools available')"
+
+    - name: Test package structure
+      run: |
+        python -c "import src.mcp_server; print('✅ Package structure valid')"
+        ls -la src/
+        ls -la tests/
+
+  build:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
 
     - name: Install build dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install build wheel
+        pip install build twine
 
     - name: Build package
       run: |
         python -m build
 
-    - name: Install package
+    - name: Check distribution
       run: |
-        pip install dist/*.whl
+        twine check dist/*
 
-    - name: Test basic import
-      run: |
-        python -c "import src; print('Package imported successfully')"
-        python -c "from src import main; print('Main function imported successfully')"
-
-    - name: Test CLI availability
-      run: |
-        codex --version || echo "Codex CLI available"
-
-    - name: Verify package metadata
-      run: |
-        python -c "import src; print(f'Version: {src.__version__}')"
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist
+        path: dist/

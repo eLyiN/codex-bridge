@@ -201,24 +201,93 @@ Please read our [Code of Conduct](CODE_OF_CONDUCT.md) for community interaction 
 
 ## 📋 Testing Guidelines
 
+### Automated Test Suite
+
+We have a comprehensive test suite in the `tests/` directory:
+
+```bash
+# Run the complete test suite
+python tests/test_mcp_tools.py
+
+# Test results are automatically generated
+cat tests/TEST_RESULTS.md
+```
+
 ### Manual Testing Checklist
 
 Before submitting, verify:
 
-- [ ] MCP server starts without errors
-- [ ] `consult_codex` tool works with basic queries (defaults to JSON format)
-- [ ] `consult_codex_with_stdin` tool works with stdin content
-- [ ] `consult_codex_batch` tool works for batch processing
-- [ ] Error handling works properly (try invalid queries)
-- [ ] Timeout configuration works (test with CODEX_TIMEOUT environment variable)
-- [ ] Documentation is updated and accurate
+- [ ] **Core Functionality**
+  - [ ] MCP server starts without errors: `python -m src`
+  - [ ] `consult_codex` tool works with basic queries (defaults to JSON format)
+  - [ ] `consult_codex_with_stdin` tool works with stdin content
+  - [ ] `consult_codex_batch` tool works for batch processing
+
+- [ ] **Output Formats**
+  - [ ] Text format: Returns clean text response
+  - [ ] JSON format: Returns valid JSON with proper structure
+  - [ ] Code format: Extracts code blocks correctly
+
+- [ ] **Environment Variables**
+  - [ ] `CODEX_TIMEOUT` configuration works (test with 120s timeout)
+  - [ ] `CODEX_SKIP_GIT_CHECK=true` allows non-git directory usage
+  - [ ] Default behavior enforces git repository check
+
+- [ ] **Error Handling**
+  - [ ] Invalid format parameter returns JSON error
+  - [ ] Invalid directory returns proper error
+  - [ ] CLI not available scenario handled
+  - [ ] All errors return consistent JSON structure
+
+- [ ] **Performance**
+  - [ ] Response times reasonable (4-30 seconds typical)
+  - [ ] No memory leaks during extended testing
+  - [ ] Batch processing handles multiple queries efficiently
+
+- [ ] **Documentation**
+  - [ ] Code changes have proper docstrings
+  - [ ] README updates for new features
+  - [ ] CHANGELOG.md updated with changes
+
+### Test Development
+
+When adding new features:
+
+1. **Add tests first** (TDD approach recommended)
+2. **Use the existing test structure**:
+   ```python
+   def test_new_feature():
+       """Test description"""
+       print("🧪 Testing new feature...")
+       
+       # Test implementation
+       result = consult_codex(...)
+       
+       # Validation with clear output
+       if condition:
+           print("✅ New feature test passed")
+       else:
+           print("❌ New feature test failed")
+   ```
+
+3. **Include both success and failure cases**
+4. **Update `tests/README.md` with new test documentation**
 
 ### Integration Testing
 
-If possible, test with:
-- Claude Code integration
-- Different Python versions (3.9, 3.10, 3.11, 3.12)
-- Various Codex models
+Test with different environments:
+- **Python versions**: 3.10, 3.11, 3.12 (minimum 3.10)
+- **Codex CLI versions**: Latest stable release
+- **Operating systems**: macOS, Linux (Windows via WSL)
+- **MCP clients**: Claude Code, Cursor, VS Code extensions
+
+### Performance Testing
+
+Monitor these metrics:
+- **Response times**: Should be consistent with documented ranges
+- **Memory usage**: Should remain stable during extended use
+- **Error rates**: Should be minimal under normal conditions
+- **CLI integration**: Should handle Codex CLI updates gracefully
 
 ## 🆘 Getting Help
 

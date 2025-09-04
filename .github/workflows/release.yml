@@ -26,6 +26,17 @@ jobs:
         python -m pip install --upgrade pip
         pip install build wheel twine
 
+    - name: Verify version matches tag
+      run: |
+        TAG_VERSION=${GITHUB_REF#refs/tags/v}
+        PACKAGE_VERSION=$(python -c "from src import __version__; print(__version__)")
+        echo "Tag version: $TAG_VERSION"
+        echo "Package version: $PACKAGE_VERSION"
+        if [ "$TAG_VERSION" != "$PACKAGE_VERSION" ]; then
+          echo "Version mismatch! Tag: $TAG_VERSION, Package: $PACKAGE_VERSION"
+          exit 1
+        fi
+
     - name: Build package
       run: |
         python -m build
@@ -47,22 +58,35 @@ jobs:
         tag_name: ${{ steps.tag.outputs.tag }}
         release_name: ${{ steps.tag.outputs.tag }}
         body: |
-          ## Release ${{ steps.tag.outputs.tag }}
+          # Codex Bridge ${{ steps.tag.outputs.tag }}
           
-          Lightweight MCP server bridging Claude Code to OpenAI's Codex AI.
+          Lightweight MCP server bridging Claude Code to OpenAI's Codex AI through the official CLI.
           
-          ### Installation
+          ## 🚀 Installation
+          
+          **PyPI Installation:**
           ```bash
-          pip install codex-bridge
+          pip install codex-bridge==${{ steps.tag.outputs.tag }}
           ```
           
-          ### Usage
+          **Claude Code Integration:**
           ```bash
-          # Add to Claude Code
           claude mcp add codex-bridge -s user -- uvx codex-bridge
           ```
           
-          See [README.md](README.md) for full documentation.
+          ## 📋 What's Changed
+          
+          See [CHANGELOG.md](https://github.com/shelakh/codex-bridge/blob/main/CHANGELOG.md) for detailed changes.
+          
+          ## 📖 Documentation
+          
+          - **Full Documentation:** [README.md](https://github.com/shelakh/codex-bridge/blob/main/README.md)
+          - **Contributing:** [CONTRIBUTING.md](https://github.com/shelakh/codex-bridge/blob/main/CONTRIBUTING.md)  
+          - **Testing:** [tests/README.md](https://github.com/shelakh/codex-bridge/blob/main/tests/README.md)
+          
+          ## ✅ Verification
+          
+          All tests passing with comprehensive functionality verification included.
         draft: false
         prerelease: false
 

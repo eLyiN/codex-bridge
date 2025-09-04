@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1] - 2025-09-04
+
+### Fixed
+- **Error Handling Consistency**: Fixed invalid format parameter error handling to always return JSON
+  - Previously returned plain text for invalid formats, now returns structured JSON error
+  - Applied fix to both `consult_codex` and `consult_codex_with_stdin` functions
+  - Ensures consistent API responses across all error conditions
+
+### Added
+- **Comprehensive Testing Suite**: New `tests/` directory with organized test structure
+  - `tests/test_mcp_tools.py` - Complete test suite for all MCP tools functionality
+  - `tests/README.md` - Testing documentation and guidelines
+  - `tests/TEST_RESULTS.md` - Detailed test execution results and performance metrics
+  - All tests passing with 100% functionality verification
+
+### Changed
+- **Code Quality**: Removed unused imports and resolved linting warnings
+- **Project Structure**: Organized testing files in dedicated `tests/` directory
+- **Documentation**: Enhanced testing documentation and contribution guidelines
+
+### Tested
+- ✅ All three MCP tools (`consult_codex`, `consult_codex_with_stdin`, `consult_codex_batch`)
+- ✅ All output formats (text, JSON, code) with proper validation
+- ✅ CODEX_SKIP_GIT_CHECK environment variable functionality  
+- ✅ Error handling for invalid parameters and edge cases
+- ✅ JSON response consistency and structure
+- ✅ Code block extraction and processing
+
 ## [1.2.0] - 2025-01-03
 
 ### Added

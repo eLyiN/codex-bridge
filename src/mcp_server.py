@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Codex MCP Server - Simple CLI Bridge
-Version 1.0.0
+Version 1.2.1
 A minimal MCP server to interface with OpenAI Codex via the codex CLI.
 Created by @shelakh/elyin
 
@@ -75,24 +75,52 @@ def _format_prompt_for_json(query: str) -> str:
     """Append JSON format instructions to query for structured output."""
     return f"""{query}
 
-IMPORTANT: Respond in valid JSON format with this exact structure:
-{{
-    "result": "your_detailed_response_here",
-    "confidence": "high|medium|low",
-    "reasoning": "brief_explanation_of_your_analysis"
-}}
-Ensure the JSON is valid and parseable."""
+Please respond in valid JSON format with this structure:
+- "result": Your detailed answer/response
+- "confidence": "high", "medium", or "low"  
+- "reasoning": Brief explanation of your analysis
+
+Format your response as valid JSON only."""
 
 
 def _extract_json_from_response(response: str) -> Optional[Dict]:
     """Extract JSON from mixed text response using regex."""
-    # Try to find JSON block in response
-    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
-    matches = re.findall(json_pattern, response, re.DOTALL)
+    # Clean the response to remove CLI noise
+    lines = response.split('\n')
+    clean_lines = []
+    json_started = False
+    
+    for line in lines:
+        # Skip CLI headers and metadata
+        if (line.startswith('[') and ']' in line and ('OpenAI' in line or 'workdir:' in line or 'model:' in line)):
+            continue
+        if line.startswith('--------'):
+            continue
+        if 'tokens used:' in line:
+            continue
+        if 'thinking' in line and line.startswith('['):
+            continue
+        if 'codex' in line and line.startswith('['):
+            continue
+            
+        # Look for JSON content
+        if '{' in line:
+            json_started = True
+        if json_started:
+            clean_lines.append(line)
+    
+    clean_response = '\n'.join(clean_lines)
+    
+    # Try to find complete JSON objects
+    json_pattern = r'\{(?:[^{}]|{[^{}]*})*\}'
+    matches = re.findall(json_pattern, clean_response, re.DOTALL)
     
     for match in matches:
         try:
-            return json.loads(match)
+            parsed = json.loads(match.strip())
+            # Validate it has expected structure
+            if isinstance(parsed, dict) and any(key in parsed for key in ['result', 'response', 'answer']):
+                return parsed
         except json.JSONDecodeError:
             continue
     
@@ -189,9 +217,8 @@ def consult_codex(
     # Validate format
     if format not in ["text", "json", "code"]:
         error_response = f"Error: Invalid format '{format}'. Must be 'text', 'json', or 'code'"
-        if format == "json":  # Even if invalid, try to return JSON
-            return json.dumps({"status": "error", "error": error_response}, indent=2)
-        return error_response
+        # Always return JSON for invalid format errors for consistency
+        return json.dumps({"status": "error", "error": error_response}, indent=2)
     
     # Prepare query based on format
     if format == "json":
@@ -305,9 +332,8 @@ def consult_codex_with_stdin(
     # Validate format
     if format not in ["text", "json", "code"]:
         error_response = f"Error: Invalid format '{format}'. Must be 'text', 'json', or 'code'"
-        if format == "json":
-            return json.dumps({"status": "error", "error": error_response}, indent=2)
-        return error_response
+        # Always return JSON for invalid format errors for consistency
+        return json.dumps({"status": "error", "error": error_response}, indent=2)
     
     # Combine stdin content with prompt
     combined_input = f"{stdin_content}\n\n{prompt}"
