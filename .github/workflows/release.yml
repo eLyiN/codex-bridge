@@ -53,12 +53,12 @@ jobs:
 
     - name: Create GitHub Release
       id: create_release
-      uses: actions/create-release@v1
+      uses: softprops/action-gh-release@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
-        release_name: ${{ steps.tag.outputs.tag }}
+        name: ${{ steps.tag.outputs.tag }}
         body: |
           # Codex Bridge ${{ steps.tag.outputs.tag }}
           
@@ -91,20 +91,9 @@ jobs:
           All tests passing with comprehensive functionality verification included.
         draft: false
         prerelease: false
-
-    - name: Find wheel file
-      id: find_wheel
-      run: echo "wheel_path=$(find dist -name '*.whl' -type f)" >> $GITHUB_OUTPUT
-
-    - name: Upload wheel to release
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ steps.find_wheel.outputs.wheel_path }}
-        asset_name: codex_bridge-${{ steps.tag.outputs.tag }}-py3-none-any.whl
-        asset_content_type: application/octet-stream
+        files: |
+          dist/*.whl
+          dist/*.tar.gz
 
     - name: Publish to PyPI
       uses: pypa/gh-action-pypi-publish@release/v1
