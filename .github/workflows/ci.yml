@@ -25,6 +25,9 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
+        # Install MCP dependency first
+        pip install mcp>=1.0.0
+        # Then install the package in development mode
         pip install -e .
         
     - name: Lint with ruff
