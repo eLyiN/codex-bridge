@@ -73,9 +73,6 @@ def _should_skip_git_check() -> bool:
     return skip_check in ("true", "1", "yes")
 
 
-
-
-
 def _run_codex_command(cmd: List[str], directory: str, timeout_value: int, input_text: str) -> subprocess.CompletedProcess:
     """Execute codex command with platform-specific handling.
     
