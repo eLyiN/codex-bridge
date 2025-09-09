@@ -14,6 +14,7 @@ Non-interactive execution with JSON output and batch processing support.
 
 import json
 import os
+import platform
 import re
 import subprocess
 import shutil
@@ -25,6 +26,30 @@ from mcp.server.fastmcp import FastMCP
 mcp = FastMCP("codex-assistant")
 
 
+def _is_windows() -> bool:
+    """Check if the current platform is Windows."""
+    return platform.system().lower() == "windows"
+
+
+def _get_codex_command() -> Optional[str]:
+    """Get the codex command path with Windows compatibility.
+    
+    Returns:
+        Path to codex executable or None if not found
+    """
+    # First try the standard shutil.which approach
+    codex_path = shutil.which("codex")
+    if codex_path:
+        return codex_path
+    
+    # On Windows, explicitly check for common executable extensions
+    if _is_windows():
+        for ext in ['.exe', '.bat', '.cmd']:
+            codex_path = shutil.which(f"codex{ext}")
+            if codex_path:
+                return codex_path
+    
+    return None
 
 
 def _get_timeout() -> int:
@@ -48,7 +73,41 @@ def _should_skip_git_check() -> bool:
     return skip_check in ("true", "1", "yes")
 
 
-
+def _run_codex_command(cmd: List[str], directory: str, timeout_value: int, input_text: str) -> subprocess.CompletedProcess:
+    """Execute codex command with platform-specific handling.
+    
+    Args:
+        cmd: Command list to execute
+        directory: Working directory
+        timeout_value: Timeout in seconds
+        input_text: Input text to pipe to the command
+        
+    Returns:
+        CompletedProcess result
+    """
+    # Windows-specific handling
+    if _is_windows():
+        # On Windows, don't use start_new_session as it's not supported
+        return subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=timeout_value,
+            input=input_text,
+            shell=False
+        )
+    else:
+        # Unix/macOS handling (original behavior)
+        return subprocess.run(
+            cmd,
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            timeout=timeout_value,
+            input=input_text,
+            start_new_session=True
+        )
 
 
 def _clean_codex_output(output: str) -> str:
@@ -201,7 +260,7 @@ def consult_codex(
         Formatted response based on format parameter
     """
     # Check if codex CLI is available
-    if not shutil.which("codex"):
+    if not _get_codex_command():
         error_response = "Error: Codex CLI not found. Install from OpenAI"
         if format == "json":
             return json.dumps({"status": "error", "error": error_response}, indent=2)
@@ -235,15 +294,7 @@ def consult_codex(
     # Execute with timing
     start_time = time.time()
     try:
-        result = subprocess.run(
-            cmd,
-            cwd=directory,
-            capture_output=True,
-            text=True,
-            timeout=timeout_value,
-            input=processed_query,
-            start_new_session=True
-        )
+        result = _run_codex_command(cmd, directory, timeout_value, processed_query)
         execution_time = time.time() - start_time
         
         if result.returncode == 0:
@@ -316,7 +367,7 @@ def consult_codex_with_stdin(
         Formatted response based on format parameter
     """
     # Check if codex CLI is available
-    if not shutil.which("codex"):
+    if not _get_codex_command():
         error_response = "Error: Codex CLI not found. Install from OpenAI"
         if format == "json":
             return json.dumps({"status": "error", "error": error_response}, indent=2)
@@ -353,15 +404,7 @@ def consult_codex_with_stdin(
     # Execute with timing
     start_time = time.time()
     try:
-        result = subprocess.run(
-            cmd,
-            cwd=directory,
-            capture_output=True,
-            text=True,
-            timeout=timeout_value,
-            input=processed_query,
-            start_new_session=True
-        )
+        result = _run_codex_command(cmd, directory, timeout_value, processed_query)
         execution_time = time.time() - start_time
         
         if result.returncode == 0:
@@ -430,7 +473,7 @@ def consult_codex_batch(
         JSON array with all results
     """
     # Check if codex CLI is available
-    if not shutil.which("codex"):
+    if not _get_codex_command():
         return json.dumps({
             "status": "error",
             "error": "Codex CLI not found. Install from OpenAI"
@@ -479,15 +522,7 @@ def consult_codex_batch(
         
         start_time = time.time()
         try:
-            result = subprocess.run(
-                cmd,
-                cwd=directory,
-                capture_output=True,
-                text=True,
-                timeout=query_timeout,
-                input=processed_query,
-                start_new_session=True
-            )
+            result = _run_codex_command(cmd, directory, query_timeout, processed_query)
             execution_time = time.time() - start_time
             
             if result.returncode == 0:
