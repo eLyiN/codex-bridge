@@ -18,7 +18,6 @@ import platform
 import re
 import subprocess
 import shutil
-import sys
 import time
 from typing import Dict, List, Optional, Union
 
