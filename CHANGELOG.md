@@ -5,6 +5,45 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.3] - 2025-12-28
+
+### Fixed
+- **Windows UTF-8 Encoding**: Fixed international character corruption on Windows systems
+  - Subprocess I/O now explicitly uses UTF-8 encoding instead of system default code page
+  - Sets `PYTHONUTF8=1` and `PYTHONIOENCODING=utf-8` environment variables for Windows
+  - Properly encodes input as UTF-8 bytes and decodes output with error handling
+  - Resolves issue #1 where Chinese and other non-ASCII characters were corrupted
+
+### Added
+- **Enhanced Windows CLI Detection**: Improved Codex CLI path detection on Windows
+  - Added `.ps1` to supported Windows executable extensions
+  - Added fallback checks for common Windows installation paths:
+    - `%LOCALAPPDATA%\Programs\codex\codex.exe`
+    - `%APPDATA%\npm\codex.cmd`
+    - `%USERPROFILE%\.cargo\bin\codex.exe`
+  - New `_build_codex_exec_command()` helper that uses the detected path
+  - PowerShell scripts (.ps1) are now executed via `powershell -ExecutionPolicy Bypass -File`
+- **Improved Error Diagnostics**: Better error messages for Windows users
+  - Added `FileNotFoundError` specific handling with actionable guidance
+  - Error responses now include platform information for debugging
+  - Clear instructions to verify `codex --version` in Command Prompt
+
+### Changed
+- **Error Metadata**: All error responses now include `platform` and `exception_type` fields
+- **Documentation**: Updated module docstring to mention Windows UTF-8 compatibility
+
+## [1.2.2] - 2025-09-09
+
+### Fixed
+- **Windows Compatibility**: Added platform-specific subprocess handling for Windows
+  - Removed `start_new_session=True` which is not supported on Windows
+  - Added Windows executable detection (.exe, .bat, .cmd extensions)
+  - Created `_run_codex_command()` helper for cross-platform execution
+
+### Added
+- **Platform Detection Utilities**: `_is_windows()` and `_get_codex_command()` functions
+- **CI/CD Improvements**: Updated GitHub Actions for PyPI Trusted Publishing
+
 ## [1.2.1] - 2025-09-04
 
 ### Fixed

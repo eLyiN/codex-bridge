@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Codex MCP Server - Simple CLI Bridge
-Version 1.2.1
+Version 1.2.3
 A minimal MCP server to interface with OpenAI Codex via the codex CLI.
 Created by @shelakh/elyin
 
@@ -10,6 +10,9 @@ Following Torvalds' principle: "Good taste in code - knowing what NOT to write"
 
 This server does ONE thing: bridge Claude to Codex CLI. Nothing more.
 Non-interactive execution with JSON output and batch processing support.
+
+Windows compatibility: Uses UTF-8 encoding for subprocess I/O to handle
+international characters correctly on Windows systems.
 """
 
 import json
@@ -33,7 +36,7 @@ def _is_windows() -> bool:
 
 def _get_codex_command() -> Optional[str]:
     """Get the codex command path with Windows compatibility.
-    
+
     Returns:
         Path to codex executable or None if not found
     """
@@ -41,15 +44,50 @@ def _get_codex_command() -> Optional[str]:
     codex_path = shutil.which("codex")
     if codex_path:
         return codex_path
-    
+
     # On Windows, explicitly check for common executable extensions
     if _is_windows():
-        for ext in ['.exe', '.bat', '.cmd']:
+        for ext in ['.exe', '.bat', '.cmd', '.ps1']:
             codex_path = shutil.which(f"codex{ext}")
             if codex_path:
                 return codex_path
-    
+
+        # Also check common installation paths on Windows
+        common_paths = [
+            os.path.expandvars(r'%LOCALAPPDATA%\Programs\codex\codex.exe'),
+            os.path.expandvars(r'%APPDATA%\npm\codex.cmd'),
+            os.path.expandvars(r'%USERPROFILE%\.cargo\bin\codex.exe'),
+        ]
+        for path in common_paths:
+            if os.path.isfile(path):
+                return path
+
     return None
+
+
+def _build_codex_exec_command() -> List[str]:
+    """Build the command list to execute codex exec.
+
+    On Windows, if the codex CLI is a PowerShell script (.ps1), we need to
+    invoke it through PowerShell explicitly. Otherwise, use the resolved path
+    or fall back to 'codex' for PATH resolution.
+
+    Returns:
+        Command list suitable for subprocess execution
+    """
+    codex_path = _get_codex_command()
+
+    if codex_path and _is_windows():
+        # Check if it's a PowerShell script
+        if codex_path.lower().endswith('.ps1'):
+            # Execute PowerShell script: powershell -ExecutionPolicy Bypass -File script.ps1 exec
+            return ['powershell', '-ExecutionPolicy', 'Bypass', '-File', codex_path, 'exec']
+        else:
+            # Use the resolved path directly for .exe, .bat, .cmd
+            return [codex_path, 'exec']
+
+    # For Unix or when codex is in PATH, use simple command
+    return ['codex', 'exec']
 
 
 def _get_timeout() -> int:
@@ -75,27 +113,45 @@ def _should_skip_git_check() -> bool:
 
 def _run_codex_command(cmd: List[str], directory: str, timeout_value: int, input_text: str) -> subprocess.CompletedProcess:
     """Execute codex command with platform-specific handling.
-    
+
     Args:
         cmd: Command list to execute
         directory: Working directory
         timeout_value: Timeout in seconds
         input_text: Input text to pipe to the command
-        
+
     Returns:
-        CompletedProcess result
+        CompletedProcess result with stdout/stderr as strings
     """
-    # Windows-specific handling
+    # Windows-specific handling with UTF-8 encoding support
     if _is_windows():
-        # On Windows, don't use start_new_session as it's not supported
-        return subprocess.run(
+        # On Windows, we need to:
+        # 1. Use encoding='utf-8' instead of text=True to avoid code page issues
+        # 2. Set PYTHONUTF8=1 and PYTHONIOENCODING=utf-8 for consistent encoding
+        # 3. Don't use start_new_session as it's not supported on Windows
+        env = os.environ.copy()
+        env['PYTHONUTF8'] = '1'
+        env['PYTHONIOENCODING'] = 'utf-8'
+
+        # Encode input as UTF-8 bytes
+        input_bytes = input_text.encode('utf-8') if input_text else None
+
+        result = subprocess.run(
             cmd,
             cwd=directory,
             capture_output=True,
-            text=True,
             timeout=timeout_value,
-            input=input_text,
-            shell=False
+            input=input_bytes,
+            shell=False,
+            env=env
+        )
+
+        # Decode output as UTF-8 with error handling
+        return subprocess.CompletedProcess(
+            args=result.args,
+            returncode=result.returncode,
+            stdout=result.stdout.decode('utf-8', errors='replace') if result.stdout else '',
+            stderr=result.stderr.decode('utf-8', errors='replace') if result.stderr else ''
         )
     else:
         # Unix/macOS handling (original behavior)
@@ -286,17 +342,17 @@ def consult_codex(
         processed_query = query
     
     # Setup command and timeout
-    cmd = ["codex", "exec"]
+    cmd = _build_codex_exec_command()
     if _should_skip_git_check():
         cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
-    
+
     # Execute with timing
     start_time = time.time()
     try:
         result = _run_codex_command(cmd, directory, timeout_value, processed_query)
         execution_time = time.time() - start_time
-        
+
         if result.returncode == 0:
             cleaned_output = _clean_codex_output(result.stdout)
             raw_response = cleaned_output if cleaned_output else "No output from Codex CLI"
@@ -314,7 +370,7 @@ def consult_codex(
                     }
                 }, indent=2)
             return error_response
-            
+
     except subprocess.TimeoutExpired:
         error_response = f"Error: Codex CLI command timed out after {timeout_value} seconds"
         if format == "json":
@@ -328,15 +384,40 @@ def consult_codex(
                 }
             }, indent=2)
         return error_response
+    except FileNotFoundError as e:
+        # More specific error for when codex command is not found
+        codex_path = _get_codex_command()
+        if _is_windows():
+            error_response = (
+                f"Error: Codex CLI not found or not executable. "
+                f"Detected path: {codex_path or 'None'}. "
+                f"Please ensure 'codex' is installed and in your PATH. "
+                f"Try running 'codex --version' in Command Prompt to verify."
+            )
+        else:
+            error_response = f"Error: Codex CLI not found: {str(e)}"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "directory": directory,
+                    "format": format,
+                    "platform": platform.system()
+                }
+            }, indent=2)
+        return error_response
     except Exception as e:
         error_response = f"Error executing Codex CLI: {str(e)}"
         if format == "json":
             return json.dumps({
-                "status": "error", 
+                "status": "error",
                 "error": error_response,
                 "metadata": {
                     "directory": directory,
-                    "format": format
+                    "format": format,
+                    "platform": platform.system(),
+                    "exception_type": type(e).__name__
                 }
             }, indent=2)
         return error_response
@@ -388,15 +469,15 @@ def consult_codex_with_stdin(
     
     # Combine stdin content with prompt
     combined_input = f"{stdin_content}\n\n{prompt}"
-    
+
     # Prepare query based on format
     if format == "json":
         processed_query = _format_prompt_for_json(combined_input)
     else:
         processed_query = combined_input
-    
+
     # Setup command and timeout
-    cmd = ["codex", "exec"]
+    cmd = _build_codex_exec_command()
     if _should_skip_git_check():
         cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
@@ -438,6 +519,29 @@ def consult_codex_with_stdin(
                 }
             }, indent=2)
         return error_response
+    except FileNotFoundError as e:
+        # More specific error for when codex command is not found
+        codex_path = _get_codex_command()
+        if _is_windows():
+            error_response = (
+                f"Error: Codex CLI not found or not executable. "
+                f"Detected path: {codex_path or 'None'}. "
+                f"Please ensure 'codex' is installed and in your PATH. "
+                f"Try running 'codex --version' in Command Prompt to verify."
+            )
+        else:
+            error_response = f"Error: Codex CLI not found: {str(e)}"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "directory": directory,
+                    "format": format,
+                    "platform": platform.system()
+                }
+            }, indent=2)
+        return error_response
     except Exception as e:
         error_response = f"Error executing Codex CLI: {str(e)}"
         if format == "json":
@@ -446,7 +550,9 @@ def consult_codex_with_stdin(
                 "error": error_response,
                 "metadata": {
                     "directory": directory,
-                    "format": format
+                    "format": format,
+                    "platform": platform.system(),
+                    "exception_type": type(e).__name__
                 }
             }, indent=2)
         return error_response
@@ -516,7 +622,7 @@ def consult_codex_batch(
         
         # Process individual query
         processed_query = _format_prompt_for_json(query)
-        cmd = ["codex", "exec"]
+        cmd = _build_codex_exec_command()
         if _should_skip_git_check():
             cmd.append("--skip-git-repo-check")
         
@@ -562,6 +668,25 @@ def consult_codex_batch(
                 "error": f"Query timed out after {query_timeout} seconds",
                 "metadata": {
                     "timeout": query_timeout
+                }
+            })
+        except FileNotFoundError as e:
+            codex_path = _get_codex_command()
+            if _is_windows():
+                error_msg = (
+                    f"Codex CLI not found or not executable. "
+                    f"Detected path: {codex_path or 'None'}. "
+                    f"Please ensure 'codex' is installed and in your PATH."
+                )
+            else:
+                error_msg = f"Codex CLI not found: {str(e)}"
+            results.append({
+                "status": "error",
+                "index": i,
+                "query": query[:100] + "..." if len(query) > 100 else query,
+                "error": error_msg,
+                "metadata": {
+                    "platform": platform.system()
                 }
             })
         except Exception as e:
