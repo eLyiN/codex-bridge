@@ -65,6 +65,31 @@ def _get_codex_command() -> Optional[str]:
     return None
 
 
+def _build_codex_exec_command() -> List[str]:
+    """Build the command list to execute codex exec.
+
+    On Windows, if the codex CLI is a PowerShell script (.ps1), we need to
+    invoke it through PowerShell explicitly. Otherwise, use the resolved path
+    or fall back to 'codex' for PATH resolution.
+
+    Returns:
+        Command list suitable for subprocess execution
+    """
+    codex_path = _get_codex_command()
+
+    if codex_path and _is_windows():
+        # Check if it's a PowerShell script
+        if codex_path.lower().endswith('.ps1'):
+            # Execute PowerShell script: powershell -ExecutionPolicy Bypass -File script.ps1 exec
+            return ['powershell', '-ExecutionPolicy', 'Bypass', '-File', codex_path, 'exec']
+        else:
+            # Use the resolved path directly for .exe, .bat, .cmd
+            return [codex_path, 'exec']
+
+    # For Unix or when codex is in PATH, use simple command
+    return ['codex', 'exec']
+
+
 def _get_timeout() -> int:
     """Get timeout from environment variable or default to 90 seconds.
     
@@ -317,17 +342,17 @@ def consult_codex(
         processed_query = query
     
     # Setup command and timeout
-    cmd = ["codex", "exec"]
+    cmd = _build_codex_exec_command()
     if _should_skip_git_check():
         cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
-    
+
     # Execute with timing
     start_time = time.time()
     try:
         result = _run_codex_command(cmd, directory, timeout_value, processed_query)
         execution_time = time.time() - start_time
-        
+
         if result.returncode == 0:
             cleaned_output = _clean_codex_output(result.stdout)
             raw_response = cleaned_output if cleaned_output else "No output from Codex CLI"
@@ -345,7 +370,7 @@ def consult_codex(
                     }
                 }, indent=2)
             return error_response
-            
+
     except subprocess.TimeoutExpired:
         error_response = f"Error: Codex CLI command timed out after {timeout_value} seconds"
         if format == "json":
@@ -444,15 +469,15 @@ def consult_codex_with_stdin(
     
     # Combine stdin content with prompt
     combined_input = f"{stdin_content}\n\n{prompt}"
-    
+
     # Prepare query based on format
     if format == "json":
         processed_query = _format_prompt_for_json(combined_input)
     else:
         processed_query = combined_input
-    
+
     # Setup command and timeout
-    cmd = ["codex", "exec"]
+    cmd = _build_codex_exec_command()
     if _should_skip_git_check():
         cmd.append("--skip-git-repo-check")
     timeout_value = timeout or _get_timeout()
@@ -597,7 +622,7 @@ def consult_codex_batch(
         
         # Process individual query
         processed_query = _format_prompt_for_json(query)
-        cmd = ["codex", "exec"]
+        cmd = _build_codex_exec_command()
         if _should_skip_git_check():
             cmd.append("--skip-git-repo-check")
         

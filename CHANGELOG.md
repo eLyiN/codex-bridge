@@ -21,6 +21,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     - `%LOCALAPPDATA%\Programs\codex\codex.exe`
     - `%APPDATA%\npm\codex.cmd`
     - `%USERPROFILE%\.cargo\bin\codex.exe`
+  - New `_build_codex_exec_command()` helper that uses the detected path
+  - PowerShell scripts (.ps1) are now executed via `powershell -ExecutionPolicy Bypass -File`
 - **Improved Error Diagnostics**: Better error messages for Windows users
   - Added `FileNotFoundError` specific handling with actionable guidance
   - Error responses now include platform information for debugging
