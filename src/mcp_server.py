@@ -111,6 +111,49 @@ def _should_skip_git_check() -> bool:
     return skip_check in ("true", "1", "yes")
 
 
+def _get_configured_model(directory: str) -> Optional[str]:
+    """Read preferred model from .reviewbridge.json in the working directory."""
+    config_path = os.path.join(directory, ".reviewbridge.json")
+    if not os.path.isfile(config_path):
+        return None
+
+    try:
+        with open(config_path, "r", encoding="utf-8") as config_file:
+            config = json.load(config_file)
+    except (OSError, json.JSONDecodeError):
+        return None
+
+    model = config.get("model") if isinstance(config, dict) else None
+    if isinstance(model, str) and model.strip():
+        return model.strip()
+    return None
+
+
+def _is_chatgpt_session_model_error(stderr: str) -> bool:
+    """Detect ChatGPT-tier continuation errors caused by gpt-5.3-codex fallback."""
+    normalized_error = stderr.lower()
+    return "gpt-5.3-codex" in normalized_error and "chatgpt account" in normalized_error
+
+
+def _inject_json_metadata(response: str, extra_metadata: Dict[str, Union[str, bool]]) -> str:
+    """Inject additional metadata into JSON responses if possible."""
+    try:
+        parsed = json.loads(response)
+    except json.JSONDecodeError:
+        return response
+
+    if not isinstance(parsed, dict):
+        return response
+
+    metadata = parsed.get("metadata")
+    if not isinstance(metadata, dict):
+        metadata = {}
+        parsed["metadata"] = metadata
+
+    metadata.update(extra_metadata)
+    return json.dumps(parsed, indent=2)
+
+
 def _run_codex_command(cmd: List[str], directory: str, timeout_value: int, input_text: str) -> subprocess.CompletedProcess:
     """Execute codex command with platform-specific handling.
 
@@ -553,6 +596,169 @@ def consult_codex_with_stdin(
                     "format": format,
                     "platform": platform.system(),
                     "exception_type": type(e).__name__
+                }
+            }, indent=2)
+        return error_response
+
+
+@mcp.tool()
+def review_plan(
+    prompt: str,
+    directory: str,
+    session_id: Optional[str] = None,
+    model: Optional[str] = None,
+    format: str = "json",
+    timeout: Optional[int] = None
+) -> str:
+    """
+    Build or continue a review-planning thread with explicit model handling.
+
+    If continuation fails because Codex attempts to route ChatGPT auth to
+    gpt-5.3-codex, retries once without session_id while preserving the model.
+    """
+    if not _get_codex_command():
+        error_response = "Error: Codex CLI not found. Install from OpenAI"
+        if format == "json":
+            return json.dumps({"status": "error", "error": error_response}, indent=2)
+        return error_response
+
+    if not os.path.isdir(directory):
+        error_response = f"Error: Directory does not exist: {directory}"
+        if format == "json":
+            return json.dumps({"status": "error", "error": error_response}, indent=2)
+        return error_response
+
+    if format not in ["text", "json", "code"]:
+        error_response = f"Error: Invalid format '{format}'. Must be 'text', 'json', or 'code'"
+        return json.dumps({"status": "error", "error": error_response}, indent=2)
+
+    configured_model = model or _get_configured_model(directory)
+
+    if format == "json":
+        processed_prompt = _format_prompt_for_json(prompt)
+    else:
+        processed_prompt = prompt
+
+    timeout_value = timeout or _get_timeout()
+    cmd = _build_codex_exec_command()
+    if _should_skip_git_check():
+        cmd.append("--skip-git-repo-check")
+    if configured_model:
+        cmd.extend(["--model", configured_model])
+    if session_id:
+        cmd.extend(["--session", session_id])
+
+    start_time = time.time()
+    try:
+        result = _run_codex_command(cmd, directory, timeout_value, processed_prompt)
+        execution_time = time.time() - start_time
+
+        if result.returncode == 0:
+            cleaned_output = _clean_codex_output(result.stdout)
+            raw_response = cleaned_output if cleaned_output else "No output from Codex CLI"
+            formatted = _format_response(raw_response, format, execution_time, directory)
+            if format == "json":
+                return _inject_json_metadata(
+                    formatted,
+                    {
+                        "model": configured_model or "",
+                        "session_id": session_id or ""
+                    }
+                )
+            return formatted
+
+        if session_id and configured_model and _is_chatgpt_session_model_error(result.stderr):
+            fallback_cmd = [arg for arg in cmd if arg != "--session" and arg != session_id]
+            fallback_result = _run_codex_command(fallback_cmd, directory, timeout_value, processed_prompt)
+            fallback_execution_time = time.time() - start_time
+
+            if fallback_result.returncode == 0:
+                cleaned_output = _clean_codex_output(fallback_result.stdout)
+                raw_response = cleaned_output if cleaned_output else "No output from Codex CLI"
+                formatted = _format_response(raw_response, format, fallback_execution_time, directory)
+                if format == "json":
+                    return _inject_json_metadata(
+                        formatted,
+                        {
+                            "model": configured_model,
+                            "fallback_used": True,
+                            "fallback_reason": "session_continuation_model_unavailable",
+                            "original_session_id": session_id
+                        }
+                    )
+                return (
+                    "Warning: session continuation model was unavailable; "
+                    "started a fresh review plan session.\n\n"
+                    f"{formatted}"
+                )
+
+        error_response = f"Codex CLI Error: {result.stderr.strip()}"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "execution_time": execution_time,
+                    "directory": directory,
+                    "format": format,
+                    "model": configured_model,
+                    "session_id": session_id
+                }
+            }, indent=2)
+        return error_response
+
+    except subprocess.TimeoutExpired:
+        error_response = f"Error: Codex CLI command timed out after {timeout_value} seconds"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "timeout": timeout_value,
+                    "directory": directory,
+                    "format": format,
+                    "model": configured_model,
+                    "session_id": session_id
+                }
+            }, indent=2)
+        return error_response
+    except FileNotFoundError as e:
+        codex_path = _get_codex_command()
+        if _is_windows():
+            error_response = (
+                f"Error: Codex CLI not found or not executable. "
+                f"Detected path: {codex_path or 'None'}. "
+                f"Please ensure 'codex' is installed and in your PATH. "
+                f"Try running 'codex --version' in Command Prompt to verify."
+            )
+        else:
+            error_response = f"Error: Codex CLI not found: {str(e)}"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "directory": directory,
+                    "format": format,
+                    "platform": platform.system(),
+                    "model": configured_model,
+                    "session_id": session_id
+                }
+            }, indent=2)
+        return error_response
+    except Exception as e:
+        error_response = f"Error executing Codex CLI: {str(e)}"
+        if format == "json":
+            return json.dumps({
+                "status": "error",
+                "error": error_response,
+                "metadata": {
+                    "directory": directory,
+                    "format": format,
+                    "platform": platform.system(),
+                    "exception_type": type(e).__name__,
+                    "model": configured_model,
+                    "session_id": session_id
                 }
             }, indent=2)
         return error_response
