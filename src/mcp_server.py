@@ -24,9 +24,9 @@ import shutil
 import time
 from typing import Dict, List, Optional, Union
 
-from mcp.server.fastmcp import FastMCP
+from mcp.server.mcpserver import MCPServer
 
-mcp = FastMCP("codex-assistant")
+mcp = MCPServer("codex-assistant")
 
 
 def _is_windows() -> bool:

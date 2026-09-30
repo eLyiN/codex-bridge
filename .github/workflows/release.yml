@@ -26,7 +26,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install build wheel twine
         # Install MCP dependency for version check
-        pip install mcp>=1.0.0
+        pip install 'mcp>=2,<3'
 
     - name: Verify version matches tag
       run: |
