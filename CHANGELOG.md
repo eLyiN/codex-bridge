@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.4] - 2026-09-30
+
+### Fixed
+- **MCP SDK 2.x Compatibility**: Fixed startup crash with the current MCP Python SDK
+  - `uvx codex-bridge` died with `ModuleNotFoundError: No module named 'mcp.server.fastmcp'` on mcp>=2
+  - Root cause: pyproject.toml declared `mcp>=1.0.0` with no upper bound while the code imported `FastMCP`, which was renamed to `MCPServer` in SDK 2.x
+  - Migrated to the 2.x SDK: `from mcp.server.mcpserver import MCPServer` with `"mcp>=2,<3"` dependency bound
+  - Added an automated regression test that runs a real MCP initialize handshake and lists the three tools in-process
+
 ## [1.2.3] - 2025-12-28
 
 ### Fixed

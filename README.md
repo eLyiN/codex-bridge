@@ -15,7 +15,7 @@ A lightweight MCP (Model Context Protocol) server that enables AI coding assista
 - **Simple MCP Tools**: Two core functions for basic queries and file analysis
 - **Stateless Operation**: No sessions, caching, or complex state management
 - **Production Ready**: Robust error handling with configurable timeouts (default: 90 seconds)
-- **Minimal Dependencies**: Only requires `mcp>=1.0.0` and Codex CLI
+- **Minimal Dependencies**: Only requires `mcp>=2,<3` and Codex CLI
 - **Easy Deployment**: Support for both uvx and traditional pip installation
 - **Universal MCP Compatibility**: Works with any MCP-compatible AI coding assistant
 

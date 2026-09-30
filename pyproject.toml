@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "codex-bridge"
-version = "1.2.3"
+version = "1.2.4"
 description = "Lightweight MCP server bridging Claude Code to OpenAI Codex via official CLI"
 readme = "README.md"
 license = "MIT"
@@ -24,7 +24,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "mcp>=1.0.0",
+    "mcp>=2,<3",
 ]
 
 [project.scripts]

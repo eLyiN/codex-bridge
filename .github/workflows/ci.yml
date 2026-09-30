@@ -26,7 +26,7 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         # Install MCP dependency first
-        pip install mcp>=1.0.0
+        pip install 'mcp>=2,<3'
         # Then install the package in development mode
         pip install -e .
         
@@ -42,6 +42,10 @@ jobs:
         pip install mypy
         mypy src/ --ignore-missing-imports || echo "Type check completed"
       continue-on-error: true
+
+    - name: Run MCP handshake regression test
+      run: |
+        python tests/test_mcp_handshake.py
 
     - name: Test imports and basic functionality
       run: |
